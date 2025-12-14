@@ -218,6 +218,119 @@ public:
         timestamp = CurrentTimestamp();
     }
 };
+// ==========================================
+//       DATA STRUCTURE: LINKED LIST (VERSIONS)
+// ==========================================
+
+/**
+ * @class VersionNode
+ * @brief Node for Singly Linked List storing file versions
+ */
+class VersionNode {
+public:
+    FileVersion data;
+    VersionNode* next;
+    
+    VersionNode(const FileVersion& v) : data(v), next(nullptr) {}
+};
+
+/**
+ * @class VersionLinkedList
+ * @brief Singly Linked List for file version history
+ */
+class VersionLinkedList {
+private:
+    VersionNode* head;
+    int count;
+    
+    // Helper function to copy nodes
+    VersionNode* CopyNodes(VersionNode* source) {
+        if (!source) return nullptr;
+        VersionNode* newHead = new VersionNode(source->data);
+        VersionNode* current = newHead;
+        VersionNode* sourceCurrent = source->next;
+        
+        while (sourceCurrent) {
+            current->next = new VersionNode(sourceCurrent->data);
+            current = current->next;
+            sourceCurrent = sourceCurrent->next;
+        }
+        return newHead;
+    }
+    
+    // Helper function to clear nodes
+    void Clear() {
+        while (head) {
+            VersionNode* temp = head;
+            head = head->next;
+            delete temp;
+        }
+        count = 0;
+    }
+    
+public:
+    VersionLinkedList() : head(nullptr), count(0) {}
+    
+    // Copy constructor
+    VersionLinkedList(const VersionLinkedList& other) : head(nullptr), count(0) {
+        head = CopyNodes(other.head);
+        count = other.count;
+    }
+    
+    // Copy assignment operator
+    VersionLinkedList& operator=(const VersionLinkedList& other) {
+        if (this != &other) {
+            Clear();
+            head = CopyNodes(other.head);
+            count = other.count;
+        }
+        return *this;
+    }
+    
+    ~VersionLinkedList() {
+        Clear();
+    }
+    
+    void AddVersion(const FileVersion& v) {
+        VersionNode* newNode = new VersionNode(v);
+        newNode->next = head;  // Insert at front (LIFO - latest first)
+        head = newNode;
+        count++;
+    }
+    
+    FileVersion GetLatest() const {
+        return head ? head->data : FileVersion("", 0);
+    }
+    
+    int GetCount() const { return count; }
+    
+    void DisplayAll() const {
+        if (!head) {
+            cout << " No versions available.\n";
+            return;
+        }
+        VersionNode* current = head;
+        int verNum = count;
+        cout << " --- VERSION HISTORY (Linked List) ---\n";
+        while (current) {
+            cout << " Version " << verNum << " [" << current->data.timestamp << "]\n";
+            current = current->next;
+            verNum--;
+        }
+    }
+    
+    FileVersion GetVersion(int versionNum) const {
+        if (versionNum < 1 || versionNum > count) return FileVersion("", 0);
+        
+        VersionNode* current = head;
+        int pos = count;
+        while (current && pos != versionNum) {
+            current = current->next;
+            pos--;
+        }
+        return current ? current->data : FileVersion("", 0);
+    }
+};
 
 int main(){
 
