@@ -204,6 +204,21 @@ public:
 // Global logger instance
 SystemLogger sysLog;
 
+// ==========================================
+//           CORE DATA CLASSES
+// ==========================================
+
+class FileVersion {
+public:
+    string content; 
+    string timestamp;
+    int versionNumber;
+
+    FileVersion(const string &c, int v) : content(c), versionNumber(v) {
+        timestamp = CurrentTimestamp();
+    }
+};
+
 int main(){
 
     return 0;
