@@ -174,6 +174,35 @@ string InputString(const string& prompt) {
     }
     return s;
 }
+class SystemLogger {
+private:
+    struct LogEntry {
+        string timestamp;
+        string action;
+        string details;
+    };
+    vector<LogEntry> logs;
+
+public:
+    void Log(string action, string details) {
+        logs.push_back({CurrentTimestamp(), action, details});
+    }
+
+    void DisplayLogs() {
+        PrintHeader("SYSTEM LOGS");
+        if (logs.empty()) {
+            cout << " No activity recorded.\n";
+            return;
+        }
+        for (auto& log : logs) {
+            cout << " [" << log.timestamp << "] " << left << setw(15) << log.action << " : " << log.details << endl;
+        }
+        PrintLine();
+    }
+};
+
+// Global logger instance
+SystemLogger sysLog;
 
 int main(){
 
