@@ -392,6 +392,51 @@ public:
         AddVersion(content_);
     }
 
+    void AddVersion(const string &rawContent) {
+        string comp = RLECompress(rawContent);
+        int nextVer = versions.GetCount() + 1;
+        versions.AddVersion(FileVersion(comp, nextVer));
+        sizeBytes = (int)rawContent.size();
+    }
+
+    string GetContent() const {
+        FileVersion latest = versions.GetLatest();
+        if (latest.versionNumber == 0) return "";
+        return RLEDecompress(latest.content);
+    }
+    
+    void DisplayVersionHistory() const {
+        versions.DisplayAll();
+    }
+    
+    int GetVersionCount() const {
+        return versions.GetCount();
+    }
+
+    void DisplayDetailed() const {
+        PrintLine('.');
+        cout << " FILE DETAILS\n";
+        cout << " ID:       " << id << "\n";
+        cout << " Name:     " << name << "." << type << "\n";
+        cout << " Owner:    " << owner << "\n";
+        cout << " Priority: " << priority << "/10\n";
+        cout << " Size:     " << sizeBytes << " bytes\n";
+        cout << " Versions: " << versions.GetCount() << "\n";
+        cout << " Content:  " << GetContent() << "\n";
+        PrintLine('.');
+    }
+
+    void DisplayRow() const {
+        cout << " " << setw(5) << id << " | " << setw(15) << name << " | " << setw(5) << type << " | " << setw(5) << sizeBytes << "B | Prio: " << priority << endl;
+    }
+
+    int GetID() const { return id; }
+    void SetID(int newID) { id = newID; } 
+    string GetName() const { return name; }
+    int GetSize() const { return sizeBytes; }
+    int GetPriority() const { return priority; }
+};
+
 int main(){
 
     return 0;
