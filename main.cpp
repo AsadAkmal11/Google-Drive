@@ -332,6 +332,66 @@ public:
     }
 };
 
+/**
+ * @class File
+ * @brief Represents a single file entity with version control and metadata.
+ */
+class File {
+private:
+    int id;
+    string name;
+    string type;
+    string owner;
+    int sizeBytes;
+    int priority; // 1-10, for Heap
+    VersionLinkedList versions;  // Changed from vector to Linked List
+    vector<string> tags;
+    
+    // --- RLE Compression Algorithms ---
+    
+    string RLECompress(const string &s) {
+        if (s.empty()) return "";
+        string out;
+        for (size_t i = 0; i < s.size();) {
+            char c = s[i];
+            size_t j = i + 1;
+            while (j < s.size() && s[j] == c) ++j;
+            out += to_string(j - i) + string(1, c);
+            i = j;
+        }
+        return out;
+    }
+
+    string RLEDecompress(const string &s) const {
+        string out;
+        size_t i = 0;
+        while (i < s.size()) {
+            int count = 0;
+            while (i < s.size() && isdigit(s[i])) {
+                count = count * 10 + (s[i] - '0');
+                ++i;
+            }
+            if (i < s.size()) {
+                char c = s[i++];
+                out.append(count, c);
+            }
+        }
+        return out;
+    }
+
+public:
+    File() : id(0), sizeBytes(0), priority(0) {} 
+
+    void SetValues(int id_, const string &name_, const string &type_, const string &owner_, const string &content_, int prio = 1) {
+        id = id_;
+        name = name_;
+        type = type_;
+        owner = owner_;
+        priority = prio;
+        sizeBytes = content_.size();
+        AddVersion(content_);
+    }
+
 int main(){
 
     return 0;
