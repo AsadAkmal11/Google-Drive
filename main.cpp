@@ -436,6 +436,132 @@ public:
     int GetSize() const { return sizeBytes; }
     int GetPriority() const { return priority; }
 };
+// ==========================================
+//       DATA STRUCTURE: DOUBLE LINKED LIST (FILE NAVIGATION)
+// ==========================================
+
+/**
+ * @class FileNode
+ * @brief Node for Double Linked List for file navigation
+ */
+class FileNode {
+public:
+    File data;
+    FileNode* prev;
+    FileNode* next;
+    
+    FileNode(const File& f) : data(f), prev(nullptr), next(nullptr) {}
+};
+
+/**
+ * @class FileDoubleLinkedList
+ * @brief Double Linked List for sequential file browsing
+ */
+class FileDoubleLinkedList {
+private:
+    FileNode* head;
+    FileNode* tail;
+    FileNode* current;  // Current position for navigation
+    
+    // Helper to copy nodes
+    void CopyNodes(const FileDoubleLinkedList& other) {
+        if (!other.head) {
+            head = tail = current = nullptr;
+            return;
+        }
+        
+        // Copy first node
+        head = new FileNode(other.head->data);
+        FileNode* otherCurrent = other.head->next;
+        FileNode* thisCurrent = head;
+        current = head;  // Set current to head initially
+        
+        // Copy remaining nodes
+        while (otherCurrent) {
+            thisCurrent->next = new FileNode(otherCurrent->data);
+            thisCurrent->next->prev = thisCurrent;
+            thisCurrent = thisCurrent->next;
+            otherCurrent = otherCurrent->next;
+        }
+        
+        tail = thisCurrent;
+    }
+    
+public:
+    FileDoubleLinkedList() : head(nullptr), tail(nullptr), current(nullptr) {}
+    
+    // Copy constructor
+    FileDoubleLinkedList(const FileDoubleLinkedList& other) : head(nullptr), tail(nullptr), current(nullptr) {
+        CopyNodes(other);
+    }
+    
+    // Copy assignment operator
+    FileDoubleLinkedList& operator=(const FileDoubleLinkedList& other) {
+        if (this != &other) {
+            Clear();
+            CopyNodes(other);
+        }
+        return *this;
+    }
+    
+    ~FileDoubleLinkedList() {
+        Clear();
+    }
+    
+    void AddFile(const File& f) {
+        FileNode* newNode = new FileNode(f);
+        if (!head) {
+            head = tail = current = newNode;
+        } else {
+            tail->next = newNode;
+            newNode->prev = tail;
+            tail = newNode;
+        }
+    }
+    
+    void Clear() {
+        FileNode* temp = head;
+        while (temp) {
+            FileNode* next = temp->next;
+            delete temp;
+            temp = next;
+        }
+        head = tail = current = nullptr;
+    }
+    
+    void BuildFromVector(const vector<File>& files) {
+        Clear();
+        for (const auto& f : files) {
+            AddFile(f);
+        }
+        current = head;  // Reset to beginning
+    }
+    
+    File* GetCurrent() { 
+        return current ? &current->data : nullptr; 
+    }
+    
+    File* GetNext() { 
+        if (current && current->next) {
+            current = current->next;
+            return &current->data;
+        }
+        return nullptr;
+    }
+    
+    File* GetPrev() {
+        if (current && current->prev) {
+            current = current->prev;
+            return &current->data;
+        }
+        return nullptr;
+    }
+    
+    void Reset() { current = head; }
+    
+    bool HasNext() const { return current && current->next != nullptr; }
+    bool HasPrev() const { return current && current->prev != nullptr; }
+};
 
 int main(){
 
