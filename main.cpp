@@ -929,6 +929,489 @@ public:
         cout << " ---------------------------------------------------------\n";
     }
 };
+    // --- SORTING ALGORITHMS ---
+
+    // Helper to get vector for sorting
+    vector<File> GetFilesVector() {
+        vector<File> v;
+        for(int i=0; i<capacity; i++) {
+            if(arr[i].GetID() > 0) v.push_back(arr[i]);
+        }
+        return v;
+    }
+
+    // 1. Bubble Sort (Size)
+    void SortBubbleSize() {
+        vector<File> v = GetFilesVector();
+        for (size_t i = 0; i < v.size() - 1; i++)
+            for (size_t j = 0; j < v.size() - i - 1; j++)
+                if (v[j].GetSize() > v[j+1].GetSize())
+                    swap(v[j], v[j+1]);
+
+        cout << "\n [SORTED BY SIZE (BUBBLE SORT)]\n";
+        for(auto& f : v) f.DisplayRow();
+    }
+
+    // 2. Quick Sort (Name)
+    int Partition(vector<File>& v, int low, int high) {
+        string pivot = v[high].GetName();
+        int i = (low - 1);
+        for (int j = low; j <= high - 1; j++) {
+            if (v[j].GetName() < pivot) {
+                i++;
+                swap(v[i], v[j]);
+            }
+        }
+        swap(v[i + 1], v[high]);
+        return (i + 1);
+    }
+
+    void QuickSort(vector<File>& v, int low, int high) {
+        if (low < high) {
+            int pi = Partition(v, low, high);
+            QuickSort(v, low, pi - 1);
+            QuickSort(v, pi + 1, high);
+        }
+    }
+
+    void SortQuickName() {
+        vector<File> v = GetFilesVector();
+        if(!v.empty()) QuickSort(v, 0, v.size()-1);
+        cout << "\n [SORTED BY NAME (QUICK SORT - O(n log n))]\n";
+        for(auto& f : v) f.DisplayRow();
+    }
+
+    // 3. Insertion Sort (Size)
+    void SortInsertionSize() {
+        vector<File> v = GetFilesVector();
+        
+        for (size_t i = 1; i < v.size(); i++) {
+            File key = v[i];
+            int j = i - 1;
+            while (j >= 0 && v[j].GetSize() > key.GetSize()) {
+                v[j + 1] = v[j];
+                j--;
+            }
+            v[j + 1] = key;
+        }
+        
+        cout << "\n [SORTED BY SIZE (INSERTION SORT - O(n²))]\n";
+        for(auto& f : v) f.DisplayRow();
+    }
+
+    // 4. Selection Sort (Size)
+    void SortSelectionSize() {
+        vector<File> v = GetFilesVector();
+        
+        for (size_t i = 0; i < v.size() - 1; i++) {
+            int minIdx = i;
+            for (size_t j = i + 1; j < v.size(); j++) {
+                if (v[j].GetSize() < v[minIdx].GetSize()) {
+                    minIdx = j;
+                }
+            }
+            swap(v[i], v[minIdx]);
+        }
+        
+        cout << "\n [SORTED BY SIZE (SELECTION SORT - O(n²))]\n";
+        for(auto& f : v) f.DisplayRow();
+    }
+
+    // 5. Merge Sort (Size)
+    void Merge(vector<File>& arr, int left, int mid, int right) {
+        int n1 = mid - left + 1;
+        int n2 = right - mid;
+        
+        vector<File> L(n1), R(n2);
+        for (int i = 0; i < n1; i++) L[i] = arr[left + i];
+        for (int j = 0; j < n2; j++) R[j] = arr[mid + 1 + j];
+        
+        int i = 0, j = 0, k = left;
+        while (i < n1 && j < n2) {
+            if (L[i].GetSize() <= R[j].GetSize()) {
+                arr[k] = L[i++];
+            } else {
+                arr[k] = R[j++];
+            }
+            k++;
+        }
+        
+        while (i < n1) arr[k++] = L[i++];
+        while (j < n2) arr[k++] = R[j++];
+    }
+
+    void MergeSort(vector<File>& arr, int left, int right) {
+        if (left < right) {
+            int mid = left + (right - left) / 2;
+            MergeSort(arr, left, mid);
+            MergeSort(arr, mid + 1, right);
+            Merge(arr, left, mid, right);
+        }
+    }
+
+    void SortMergeSize() {
+        vector<File> v = GetFilesVector();
+        if (!v.empty()) MergeSort(v, 0, v.size() - 1);
+        cout << "\n [SORTED BY SIZE (MERGE SORT - O(n log n))]\n";
+        for(auto& f : v) f.DisplayRow();
+    }
+
+    // 6. Heap Sort (Size)
+    void Heapify(vector<File>& arr, int n, int i) {
+        int largest = i;
+        int left = 2 * i + 1;
+        int right = 2 * i + 2;
+        
+        if (left < n && arr[left].GetSize() > arr[largest].GetSize())
+            largest = left;
+        if (right < n && arr[right].GetSize() > arr[largest].GetSize())
+            largest = right;
+        
+        if (largest != i) {
+            swap(arr[i], arr[largest]);
+            Heapify(arr, n, largest);
+        }
+    }
+
+    void SortHeapSize() {
+        vector<File> v = GetFilesVector();
+        int n = v.size();
+        
+        // Build max heap
+        for (int i = n / 2 - 1; i >= 0; i--)
+            Heapify(v, n, i);
+        
+        // Extract elements one by one
+        for (int i = n - 1; i > 0; i--) {
+            swap(v[0], v[i]);
+            Heapify(v, i, 0);
+        }
+        
+        cout << "\n [SORTED BY SIZE (HEAP SORT - O(n log n))]\n";
+        for(auto& f : v) f.DisplayRow();
+    }
+
+    // 7. Counting Sort (Size) - O(n+k)
+    void SortCountingSize() {
+        vector<File> v = GetFilesVector();
+        if (v.empty()) return;
+        
+        // Find max size
+        int maxSize = v[0].GetSize();
+        for (auto& f : v) {
+            if (f.GetSize() > maxSize) maxSize = f.GetSize();
+        }
+        
+        // Count array
+        vector<int> count(maxSize + 1, 0);
+        for (auto& f : v) count[f.GetSize()]++;
+        
+        // Cumulative count
+        for (int i = 1; i <= maxSize; i++) count[i] += count[i - 1];
+        
+        // Output array
+        vector<File> output(v.size());
+        for (int i = v.size() - 1; i >= 0; i--) {
+            output[count[v[i].GetSize()] - 1] = v[i];
+            count[v[i].GetSize()]--;
+        }
+        
+        cout << "\n [SORTED BY SIZE (COUNTING SORT - O(n+k))]\n";
+        for(auto& f : output) f.DisplayRow();
+    }
+
+    // 8. Radix Sort (Name) - O(d*n)
+    void RadixSortNames(vector<File>& arr) {
+        if (arr.empty()) return;
+        
+        // Get max length
+        int maxLen = 0;
+        for (auto& f : arr) {
+            int len = f.GetName().length();
+            if (len > maxLen) maxLen = len;
+        }
+        
+        // Sort by each character position (right to left)
+        for (int pos = maxLen - 1; pos >= 0; pos--) {
+            vector<File> output(arr.size());
+            vector<int> count(256, 0);  // ASCII characters
+            
+            // Count occurrences
+            for (auto& f : arr) {
+                char ch = (pos < f.GetName().length()) ? 
+                          tolower(f.GetName()[pos]) : 0;
+                count[ch]++;
+            }
+            
+            // Cumulative count
+            for (int i = 1; i < 256; i++) count[i] += count[i - 1];
+            
+            // Build output
+            for (int i = arr.size() - 1; i >= 0; i--) {
+                char ch = (pos < arr[i].GetName().length()) ? 
+                          tolower(arr[i].GetName()[pos]) : 0;
+                output[count[ch] - 1] = arr[i];
+                count[ch]--;
+            }
+            
+            arr = output;
+        }
+    }
+
+    void SortRadixName() {
+        vector<File> v = GetFilesVector();
+        if (!v.empty()) RadixSortNames(v);
+        cout << "\n [SORTED BY NAME (RADIX SORT - O(d*n))]\n";
+        for(auto& f : v) f.DisplayRow();
+    }
+};
+
+// ==========================================
+//       CLASS: FOLDER
+// ==========================================
+
+class Folder {
+private:
+    string name;
+    string owner;
+    int id;
+    int fileIDCounter;
+    
+    HashTableFiles files;
+    FileStack deletedFiles;
+    FileQueue recentFiles;
+    FileMaxHeap starredFiles;
+    FileDoubleLinkedList fileNavigator;  // For file browsing
+
+public:
+    Folder() : id(0), fileIDCounter(1) {}
+    
+    // Copy constructor - CRITICAL: Ensures all members are properly copied
+    Folder(const Folder& other) 
+        : name(other.name), owner(other.owner), id(other.id), 
+          fileIDCounter(other.fileIDCounter),
+          files(other.files),  // HashTableFiles now has proper copy semantics
+          deletedFiles(other.deletedFiles),  // FileStack uses array, safe
+          recentFiles(other.recentFiles),  // FileQueue uses array, safe
+          starredFiles(other.starredFiles),  // FileMaxHeap uses vector, safe
+          fileNavigator(other.fileNavigator)  // FileDoubleLinkedList now has copy semantics
+    {}
+    
+    // Copy assignment operator - CRITICAL: Ensures safe assignment
+    Folder& operator=(const Folder& other) {
+        if (this != &other) {
+            name = other.name;
+            owner = other.owner;
+            id = other.id;
+            fileIDCounter = other.fileIDCounter;
+            files = other.files;
+            deletedFiles = other.deletedFiles;
+            recentFiles = other.recentFiles;
+            starredFiles = other.starredFiles;
+            fileNavigator = other.fileNavigator;
+        }
+        return *this;
+    }
+
+    void SetValues(const string &n, int i, const string &own) {
+        name = n; id = i; owner = own;
+    }
+    
+    string GetName() const { return name; }
+    int GetID() const { return id; }
+    int GetFileIDCounter() const { return fileIDCounter; }
+
+    void CreateFile() {
+        PrintHeader("CREATE NEW FILE");
+        string fname = InputString(" Enter file name: ");
+        string type = InputString(" Enter file type (txt/doc/cpp): ");
+        string content = InputString(" Enter content: ");
+        int prio = InputInt(" Enter Priority (1-10): ", 1, 10);
+        
+        File f;
+        f.SetValues(fileIDCounter, fname, type, owner, content, prio);
+        files.Insert(f);
+        
+        if (prio >= 8) starredFiles.Insert(f); // Auto-star high priority
+
+        cout << " [SUCCESS] File '" << fname << "' created (ID: " << fileIDCounter << ").\n";
+        sysLog.Log("FileCreated", "File " + fname + " created in " + name);
+        fileIDCounter++;
+    }
+
+    void InsertSharedFile(File f) {
+        f.SetID(fileIDCounter++);
+        files.Insert(f);
+        if(f.GetPriority() >= 8) starredFiles.Insert(f);
+    }
+
+    void SearchFile() {
+        int searchId = InputInt(" Enter File ID to search: ");
+        File* f = files.Search(searchId);
+        if (f) {
+            f->DisplayDetailed();
+            recentFiles.Enqueue(*f);
+            sysLog.Log("FileAccessed", "Viewed file ID " + to_string(searchId));
+        } else {
+            cout << " [ERROR] File not found.\n";
+        }
+    }
+
+    void DeleteFile() {
+        int delId = InputInt(" Enter File ID to delete: ");
+        File f = files.Delete(delId);
+        if (f.GetID() > 0) {
+            deletedFiles.Push(f);
+            cout << " [SUCCESS] File moved to Trash.\n";
+            sysLog.Log("FileDeleted", "Deleted file ID " + to_string(delId));
+        } else {
+            cout << " [ERROR] File not found.\n";
+        }
+    }
+
+    void RecoverFile() {
+        if(deletedFiles.IsEmpty()) {
+            cout << " [INFO] Trash is empty.\n";
+            return;
+        }
+        File f = deletedFiles.Pop();
+        files.Insert(f);
+        cout << " [SUCCESS] Restored '" << f.GetName() << "'.\n";
+        sysLog.Log("FileRestored", "Restored file " + f.GetName());
+    }
+
+    void BrowseFiles() {
+        vector<File> fileList = files.GetFilesVector();
+        if (fileList.empty()) {
+            cout << " [INFO] No files to browse.\n";
+            return;
+        }
+        
+        fileNavigator.BuildFromVector(fileList);
+        fileNavigator.Reset();
+        
+        while (true) {
+            ClearScreen();
+            PrintHeader("BROWSE FILES (Double Linked List)");
+            File* current = fileNavigator.GetCurrent();
+            if (current) {
+                current->DisplayDetailed();
+                cout << "\n Navigation:\n";
+                cout << " [N] Next File  [P] Previous File  [Q] Quit\n";
+                cout << " [V] View Version History\n";
+                PrintLine();
+                
+                char choice;
+                cout << " Enter choice: ";
+                cin >> choice;
+                cin.ignore();
+                choice = tolower(choice);
+                
+                switch(choice) {
+                    case 'n':
+                        if (fileNavigator.GetNext()) {
+                            cout << " Moved to next file.\n";
+                        } else {
+                            cout << " [INFO] Already at last file.\n";
+                        }
+                        break;
+                    case 'p':
+                        if (fileNavigator.GetPrev()) {
+                            cout << " Moved to previous file.\n";
+                        } else {
+                            cout << " [INFO] Already at first file.\n";
+                        }
+                        break;
+                    case 'v': {
+                        File* f = fileNavigator.GetCurrent();
+                        if (f) {
+                            PrintHeader("VERSION HISTORY (Linked List)");
+                            f->DisplayVersionHistory();
+                        }
+                        break;
+                    }
+                    case 'q':
+                        return;
+                    default:
+                        cout << " Invalid choice.\n";
+                }
+                cout << "\n (Press Enter to continue...)";
+                cin.get();
+            } else {
+                cout << " [ERROR] No files available.\n";
+                return;
+            }
+        }
+    }
+
+    void ViewFileVersions() {
+        int fileId = InputInt(" Enter File ID to view versions: ");
+        File* f = files.Search(fileId);
+        if (f) {
+            PrintHeader("VERSION HISTORY (Linked List)");
+            f->DisplayVersionHistory();
+            cout << "\n Total versions: " << f->GetVersionCount() << endl;
+        } else {
+            cout << " [ERROR] File not found.\n";
+        }
+    }
+
+    void ShowMenu() {
+        while(true) {
+            PrintHeader("FOLDER: " + name);
+            cout << " 1. Create File\n";
+            cout << " 2. List All Files\n";
+            cout << " 3. Search File\n";
+            cout << " 4. Delete File\n";
+            cout << " 5. Trash Bin (Undo)\n";
+            cout << " 6. Recover Last Deleted\n";
+            cout << " 7. Recent Files\n";
+            cout << " 8. Starred/Priority Files\n";
+            cout << " 9. Browse Files (Double Linked List)\n";
+            cout << " 10. View File Version History (Linked List)\n";
+            cout << " --- SORTING ALGORITHMS ---\n";
+            cout << " 11. Sort: By Size (Bubble Sort)\n";
+            cout << " 12. Sort: By Size (Insertion Sort)\n";
+            cout << " 13. Sort: By Size (Selection Sort)\n";
+            cout << " 14. Sort: By Size (Merge Sort)\n";
+            cout << " 15. Sort: By Size (Heap Sort)\n";
+            cout << " 16. Sort: By Size (Counting Sort)\n";
+            cout << " 17. Sort: By Name (Quick Sort)\n";
+            cout << " 18. Sort: By Name (Radix Sort)\n";
+            cout << " 19. Back to Drive\n";
+            PrintLine();
+            
+            int ch = InputInt(" Select Action: ", 1, 19);
+            
+            switch(ch) {
+                case 1: CreateFile(); break;
+                case 2: files.DisplayAll(); break;
+                case 3: SearchFile(); break;
+                case 4: DeleteFile(); break;
+                case 5: deletedFiles.Display(); break;
+                case 6: RecoverFile(); break;
+                case 7: recentFiles.Display(); break;
+                case 8: starredFiles.DisplayTop(); break;
+                case 9: BrowseFiles(); break;
+                case 10: ViewFileVersions(); break;
+                case 11: files.SortBubbleSize(); break;
+                case 12: files.SortInsertionSize(); break;
+                case 13: files.SortSelectionSize(); break;
+                case 14: files.SortMergeSize(); break;
+                case 15: files.SortHeapSize(); break;
+                case 16: files.SortCountingSize(); break;
+                case 17: files.SortQuickName(); break;
+                case 18: files.SortRadixName(); break;
+                case 19: return;
+            }
+            
+            cout << "\n (Press Enter to continue...)";
+            cin.get(); 
+        }
+    }
+
+    File* GetFileById(int fid) { return files.Search(fid); }
+};
 
 int main(){
 
