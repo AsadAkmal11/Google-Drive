@@ -563,6 +563,372 @@ public:
     bool HasPrev() const { return current && current->prev != nullptr; }
 };
 
+// ==========================================
+//       DATA STRUCTURE: CIRCULAR LINKED LIST (NOTIFICATIONS)
+// ==========================================
+
+/**
+ * @class NotificationNode
+ * @brief Node for Circular Linked List storing notifications
+ */
+class NotificationNode {
+public:
+    string message;
+    NotificationNode* next;
+    
+    NotificationNode(const string& msg) : message(msg), next(nullptr) {}
+};
+
+/**
+ * @class CircularNotificationQueue
+ * @brief Circular Linked List for notification management
+ */
+class CircularNotificationQueue {
+private:
+    NotificationNode* tail;  // Points to last node (tail->next = head)
+    int count;
+    
+public:
+    CircularNotificationQueue() : tail(nullptr), count(0) {}
+    
+    ~CircularNotificationQueue() {
+        if (!tail) return;
+        
+        NotificationNode* current = tail->next;  // Start from head
+        NotificationNode* start = current;
+        
+        if (current) {
+            do {
+                NotificationNode* temp = current;
+                current = current->next;
+                delete temp;
+            } while (current != start);
+        }
+    }
+    
+    void AddNotification(const string& msg) {
+        NotificationNode* newNode = new NotificationNode(msg);
+        if (!tail) {
+            tail = newNode;
+            tail->next = tail;  // Points to itself (circular)
+        } else {
+            newNode->next = tail->next;  // New node points to head
+            tail->next = newNode;        // Old tail points to new node
+            tail = newNode;              // Update tail
+        }
+        count++;
+    }
+    
+    void DisplayAll() {
+        if (!tail) { 
+            cout << " No notifications.\n"; 
+            return; 
+        }
+        
+        NotificationNode* current = tail->next;  // Start from head
+        NotificationNode* start = current;
+        int idx = 1;
+        
+        cout << " --- NOTIFICATIONS (Circular Linked List) ---\n";
+        do {
+            cout << " [" << idx++ << "] " << current->message << endl;
+            current = current->next;
+        } while (current != start);  // Until we circle back
+    }
+    
+    int GetCount() const { return count; }
+    
+    void Clear() {
+        if (!tail) return;
+        
+        NotificationNode* current = tail->next;
+        NotificationNode* start = current;
+        
+        if (current) {
+            do {
+                NotificationNode* temp = current;
+                current = current->next;
+                delete temp;
+            } while (current != start);
+        }
+        
+        tail = nullptr;
+        count = 0;
+    }
+};
+
+// ==========================================
+//       DATA STRUCTURE: STACK & QUEUE
+// ==========================================
+
+/**
+ * @class FileStack
+ * @brief Implements LIFO structure for Deleted Files (Trash Bin).
+ */
+class FileStack { 
+    int top;
+    File arr[MAX_STACK_SIZE];
+public:
+    FileStack() : top(0) {}
+    
+    void Push(File f) { 
+        if(top < MAX_STACK_SIZE) {
+            arr[top++] = f; 
+        } else {
+            cout << " [WARN] Trash bin full. Oldest deleted file overwritten.\n";
+            // Shift left to make space
+            for(int i=0; i<MAX_STACK_SIZE-1; i++) arr[i] = arr[i+1];
+            arr[MAX_STACK_SIZE-1] = f;
+        }
+    }
+
+    File Pop() { 
+        if(!IsEmpty()) return arr[--top]; 
+        return File(); 
+    }
+
+    bool IsEmpty() const { return top == 0; }
+    
+    void EmptyTrash() {
+        top = 0;
+        cout << " Trash bin emptied.\n";
+    }
+
+    void Display() const {
+        if(IsEmpty()) { cout << " (Trash is empty)\n"; return; }
+        for (int i = top-1; i >= 0; i--) {
+            cout << " [" << i+1 << "] " << arr[i].GetName() << " (ID: " << arr[i].GetID() << ")\n";
+        }
+    }
+};
+
+/**
+ * @class FileQueue
+ * @brief Implements FIFO structure for Recent Files history.
+ */
+class FileQueue { 
+    int front, rear;
+    File arr[MAX_QUEUE_SIZE];
+    int count;
+public:
+    FileQueue() : front(0), rear(0), count(0) {}
+    
+    void Enqueue(File f) {
+        arr[rear] = f;
+        rear = (rear + 1) % MAX_QUEUE_SIZE;
+        if (count < MAX_QUEUE_SIZE) count++;
+        else front = (front + 1) % MAX_QUEUE_SIZE; 
+    }
+
+    void Display() const {
+        if (count == 0) { cout << " (No recent files)\n"; return; }
+        int idx = front;
+        for(int i=0; i<count; i++) {
+            cout << "  " << i+1 << ". " << arr[idx].GetName() << " (Accessed: " << CurrentTimestamp() << ")\n";
+            idx = (idx + 1) % MAX_QUEUE_SIZE;
+        }
+    }
+};
+
+// ==========================================
+//       DATA STRUCTURE: MAX HEAP (PRIORITY)
+// ==========================================
+
+/**
+ * @class FileMaxHeap
+ * @brief Manages "Starred" or High Priority files.
+ */
+class FileMaxHeap {
+private:
+    vector<File> heap;
+
+    int Parent(int i) { return (i - 1) / 2; }
+    int Left(int i) { return (2 * i + 1); }
+    int Right(int i) { return (2 * i + 2); }
+
+    void HeapifyDown(int i) {
+        int l = Left(i);
+        int r = Right(i);
+        int largest = i;
+
+        if (l < heap.size() && heap[l].GetPriority() > heap[largest].GetPriority())
+            largest = l;
+        if (r < heap.size() && heap[r].GetPriority() > heap[largest].GetPriority())
+            largest = r;
+
+        if (largest != i) {
+            swap(heap[i], heap[largest]);
+            HeapifyDown(largest);
+        }
+    }
+
+    void HeapifyUp(int i) {
+        if (i && heap[Parent(i)].GetPriority() < heap[i].GetPriority()) {
+            swap(heap[i], heap[Parent(i)]);
+            HeapifyUp(Parent(i));
+        }
+    }
+
+public:
+    void Insert(File f) {
+        heap.push_back(f);
+        HeapifyUp(heap.size() - 1);
+    }
+
+    void DisplayTop() {
+        if (heap.empty()) { cout << " No starred files.\n"; return; }
+        
+        // Sort a copy for display without ruining heap structure
+        vector<File> temp = heap;
+        sort(temp.begin(), temp.end(), [](File a, File b){
+            return a.GetPriority() > b.GetPriority();
+        });
+
+        cout << " --- STARRED FILES (High Priority) ---\n";
+        for (const auto& f : temp) {
+            cout << " [Prio " << f.GetPriority() << "] " << f.GetName() << "\n";
+        }
+    }
+
+    File ExtractMax() {
+        if (heap.empty()) return File();
+        File root = heap[0];
+        heap[0] = heap.back();
+        heap.pop_back();
+        HeapifyDown(0);
+        return root;
+    }
+};
+
+// ==========================================
+//       DATA STRUCTURE: HASH TABLE
+// ==========================================
+
+/**
+ * @class HashTableFiles
+ * @brief Stores files in a folder using Linear Probing for collision resolution.
+ */
+class HashTableFiles {
+private:
+    int capacity;
+    int currentSize;
+    File* arr;
+
+    int HashFunction(int key) { return key % capacity; }
+
+    void Resize() {
+        int oldCapacity = capacity;
+        File* oldArr = arr;
+        
+        capacity = capacity * 2; 
+        arr = new File[capacity];
+        currentSize = 0;
+
+        for (int i = 0; i < oldCapacity; i++) {
+            if (oldArr[i].GetID() > 0) { 
+                Insert(oldArr[i]);
+            }
+        }
+        delete[] oldArr;
+        // sysLog.Log("System", "Hash Table Resized to " + to_string(capacity));
+    }
+
+public:
+    HashTableFiles(int cap = INITIAL_HASH_SIZE) : capacity(cap), currentSize(0) {
+        arr = new File[capacity];
+    }
+
+    // Copy constructor - CRITICAL: Prevents shallow copy crashes
+    HashTableFiles(const HashTableFiles& other) : capacity(other.capacity), currentSize(other.currentSize) {
+        arr = new File[capacity];
+        for (int i = 0; i < capacity; i++) {
+            arr[i] = other.arr[i];  // Deep copy each File
+        }
+    }
+
+    // Copy assignment operator - CRITICAL: Prevents shallow copy crashes
+    HashTableFiles& operator=(const HashTableFiles& other) {
+        if (this != &other) {
+            delete[] arr;  // Free existing memory
+            capacity = other.capacity;
+            currentSize = other.currentSize;
+            arr = new File[capacity];
+            for (int i = 0; i < capacity; i++) {
+                arr[i] = other.arr[i];  // Deep copy each File
+            }
+        }
+        return *this;
+    }
+
+    ~HashTableFiles() { 
+        if (arr) {
+            delete[] arr;
+            arr = nullptr;
+        }
+    }
+
+    void Insert(File f) {
+        if (currentSize >= capacity * 0.7) Resize();
+
+        int idx = HashFunction(f.GetID());
+        int startIdx = idx;
+        
+        while (arr[idx].GetID() > 0) { 
+            if (arr[idx].GetID() == f.GetID()) {
+                cout << " [Error] Duplicate File ID.\n";
+                return;
+            }
+            idx = (idx + 1) % capacity;
+            if (idx == startIdx) return; // Should not happen due to resize
+        }
+        
+        arr[idx] = f;
+        currentSize++;
+    }
+
+    File* Search(int id) {
+        int idx = HashFunction(id);
+        int startIdx = idx;
+        
+        while (arr[idx].GetID() != 0) { 
+            if (arr[idx].GetID() == id) return &arr[idx]; 
+            idx = (idx + 1) % capacity;
+            if (idx == startIdx) break; 
+        }
+        return nullptr;
+    }
+
+    File Delete(int id) {
+        int idx = HashFunction(id);
+        int startIdx = idx;
+
+        while (arr[idx].GetID() != 0) {
+            if (arr[idx].GetID() == id) {
+                File temp = arr[idx];
+                arr[idx].SetID(-1); // Tombstone
+                currentSize--;
+                return temp;
+            }
+            idx = (idx + 1) % capacity;
+            if (idx == startIdx) break;
+        }
+        return File();
+    }
+
+    void DisplayAll() {
+        if (currentSize == 0) { cout << " (Folder is empty)\n"; return; }
+        
+        cout << " ---------------------------------------------------------\n";
+        cout << "   ID  |      NAME       | TYPE  | SIZE   | PRIORITY \n";
+        cout << " ---------------------------------------------------------\n";
+        for (int i = 0; i < capacity; i++) {
+            if (arr[i].GetID() > 0) {
+                arr[i].DisplayRow();
+            }
+        }
+        cout << " ---------------------------------------------------------\n";
+    }
+
 int main(){
 
     return 0;
