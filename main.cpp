@@ -928,7 +928,7 @@ public:
         }
         cout << " ---------------------------------------------------------\n";
     }
-};
+
     // --- SORTING ALGORITHMS ---
 
     // Helper to get vector for sorting
