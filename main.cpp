@@ -1413,6 +1413,246 @@ public:
     File* GetFileById(int fid) { return files.Search(fid); }
 };
 
+// ==========================================
+//       DATA STRUCTURE: AVL TREE
+// ==========================================
+
+class TreeNode {
+public:
+    Folder data;
+    TreeNode* left;
+    TreeNode* right;
+    int height;
+    TreeNode(Folder f) : data(f), left(nullptr), right(nullptr), height(1) {}
+};
+
+class AVLTreeFolders {
+private:
+    TreeNode* root;
+
+    int Height(TreeNode* n) { return n ? n->height : 0; }
+    int BalanceFactor(TreeNode* n) { return Height(n->left) - Height(n->right); }
+
+    TreeNode* RotateRight(TreeNode* y) {
+        if (!y || !y->left) return y;  // Safety check
+        TreeNode* x = y->left;
+        TreeNode* T2 = x->right;
+        x->right = y; 
+        y->left = T2;
+        y->height = max(Height(y->left), Height(y->right)) + 1;
+        x->height = max(Height(x->left), Height(x->right)) + 1;
+        return x;
+    }
+
+    TreeNode* RotateLeft(TreeNode* x) {
+        if (!x || !x->right) return x;  // Safety check
+        TreeNode* y = x->right;
+        TreeNode* T2 = y->left;
+        y->left = x; 
+        x->right = T2;
+        x->height = max(Height(x->left), Height(x->right)) + 1;
+        y->height = max(Height(y->left), Height(y->right)) + 1;
+        return y;
+    }
+
+    TreeNode* Insert(TreeNode* node, Folder f) {
+        if (!node) return new TreeNode(f);
+
+        if (f.GetID() < node->data.GetID())
+            node->left = Insert(node->left, f);
+        else if (f.GetID() > node->data.GetID())
+            node->right = Insert(node->right, f);
+        else return node; // No duplicates
+
+        node->height = 1 + max(Height(node->left), Height(node->right));
+        int balance = BalanceFactor(node);
+
+        // Left Left
+        if (balance > 1 && node->left && f.GetID() < node->left->data.GetID())
+            return RotateRight(node);
+        // Right Right
+        if (balance < -1 && node->right && f.GetID() > node->data.GetID())
+            return RotateLeft(node);
+        // Left Right
+        if (balance > 1 && node->left && f.GetID() > node->left->data.GetID()) {
+            node->left = RotateLeft(node->left);
+            return RotateRight(node);
+        }
+        // Right Left
+        if (balance < -1 && node->right && f.GetID() < node->right->data.GetID()) {
+            node->right = RotateRight(node->right);
+            return RotateLeft(node);
+        }
+        return node;
+    }
+
+    void InOrderDisplay(TreeNode* root) {
+        if(root) {
+            InOrderDisplay(root->left);
+            cout << " [ID: " << setw(3) << root->data.GetID() << "] " << root->data.GetName() << "\n";
+            InOrderDisplay(root->right);
+        }
+    }
+
+    TreeNode* Search(TreeNode* root, int id) {
+        if (!root || root->data.GetID() == id) return root;
+        if (id < root->data.GetID()) return Search(root->left, id);
+        return Search(root->right, id);
+    }
+
+private:
+    // Helper function to delete all nodes recursively
+    void DeleteTree(TreeNode* node) {
+        if (node) {
+            DeleteTree(node->left);
+            DeleteTree(node->right);
+            delete node;
+        }
+    }
+
+public:
+    AVLTreeFolders() : root(nullptr) {}
+    
+    // Destructor - CRITICAL: Prevents memory leaks
+    ~AVLTreeFolders() {
+        DeleteTree(root);
+        root = nullptr;
+    }
+    
+    // Copy constructor - CRITICAL: Prevents shallow copy issues
+    AVLTreeFolders(const AVLTreeFolders& other) : root(nullptr) {
+        if (other.root) {
+            root = CopyTree(other.root);
+        }
+    }
+    
+    // Copy assignment operator
+    AVLTreeFolders& operator=(const AVLTreeFolders& other) {
+        if (this != &other) {
+            DeleteTree(root);
+            root = nullptr;
+            if (other.root) {
+                root = CopyTree(other.root);
+            }
+        }
+        return *this;
+    }
+    
+    // Helper to copy tree recursively - creates new nodes
+    TreeNode* CopyTree(TreeNode* source) {
+        if (!source) return nullptr;
+        TreeNode* newNode = new TreeNode(source->data);  // Copy folder data
+        newNode->left = CopyTree(source->left);
+        newNode->right = CopyTree(source->right);
+        newNode->height = source->height;
+        return newNode;
+    }
+
+    void AddFolder(Folder f) {
+        if (root) {
+            // Check for duplicate ID before inserting
+            TreeNode* existing = Search(root, f.GetID());
+            if (existing) {
+                cout << " [WARNING] Folder with ID " << f.GetID() << " already exists. Skipping.\n";
+                return;
+            }
+        }
+        root = Insert(root, f);
+    }
+
+    Folder* GetFolder(int id) {
+        if (!root) return nullptr;  // Safety check
+        TreeNode* res = Search(root, id);
+        return res ? &res->data : nullptr;
+    }
+
+    void DisplayAll() {
+        if(!root) {
+            cout << " No folders yet.\n";
+        } else {
+            cout << " --- FOLDER LIST (In-Order) ---\n";
+            InOrderDisplay(root);
+        }
+    }
+};
+
+// ==========================================
+//       DATA STRUCTURE: TRIE (AUTOCOMPLETE)
+// ==========================================
+
+const int ALPHABET_SIZE = 26;
+
+struct TrieNode {
+    TrieNode *children[ALPHABET_SIZE];
+    bool isEndOfWord;
+    
+    TrieNode() {
+        isEndOfWord = false;
+        for (int i = 0; i < ALPHABET_SIZE; i++)
+            children[i] = nullptr;
+    }
+};
+
+class TrieUsers {
+private:
+    TrieNode *root;
+
+public:
+    TrieUsers() { root = new TrieNode(); }
+
+    void Insert(string key) {
+        TrieNode *pCrawl = root;
+        for (int i = 0; i < key.length(); i++) {
+            int index = tolower(key[i]) - 'a';
+            if (index < 0 || index >= 26) continue; // Skip non-alpha for simplicity
+            if (!pCrawl->children[index])
+                pCrawl->children[index] = new TrieNode();
+            pCrawl = pCrawl->children[index];
+        }
+        pCrawl->isEndOfWord = true;
+    }
+
+    bool Search(string key) {
+        TrieNode *pCrawl = root;
+        for (int i = 0; i < key.length(); i++) {
+            int index = tolower(key[i]) - 'a';
+            if (index < 0 || index >= 26) return false;
+            if (!pCrawl->children[index])
+                return false;
+            pCrawl = pCrawl->children[index];
+        }
+        return (pCrawl != nullptr && pCrawl->isEndOfWord);
+    }
+    
+    // Helper for autocomplete suggestion
+    void SuggestHelper(TrieNode* root, string currPrefix) {
+        if (!root) return;  // Safety check
+        if (root->isEndOfWord) {
+            cout << " - " << currPrefix << endl;
+        }
+        for (int i = 0; i < ALPHABET_SIZE; i++) {
+            if (root->children[i]) {
+                char child = 'a' + i;
+                SuggestHelper(root->children[i], currPrefix + child);
+            }
+        }
+    }
+
+    void AutoComplete(string prefix) {
+        TrieNode *pCrawl = root;
+        for (int i = 0; i < prefix.length(); i++) {
+            int index = tolower(prefix[i]) - 'a';
+            if (!pCrawl->children[index]) {
+                cout << " No users found with prefix '" << prefix << "'.\n";
+                return;
+            }
+            pCrawl = pCrawl->children[index];
+        }
+        cout << " Suggestions for '" << prefix << "':\n";
+        SuggestHelper(pCrawl, prefix);
+    }
+};
+
 int main(){
 
     return 0;
