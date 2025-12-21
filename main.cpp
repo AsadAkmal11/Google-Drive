@@ -1138,8 +1138,7 @@ public:
             
             // Count occurrences
             for (auto& f : arr) {
-                char ch = (pos < f.GetName().length()) ? 
-                          tolower(f.GetName()[pos]) : 0;
+                char ch = (pos < f.GetName().length()) ? tolower(f.GetName()[pos]) : 0;
                 count[ch]++;
             }
             
@@ -1148,8 +1147,7 @@ public:
             
             // Build output
             for (int i = arr.size() - 1; i >= 0; i--) {
-                char ch = (pos < arr[i].GetName().length()) ? 
-                          tolower(arr[i].GetName()[pos]) : 0;
+                char ch = (pos < arr[i].GetName().length()) ? tolower(arr[i].GetName()[pos]) : 0;
                 output[count[ch] - 1] = arr[i];
                 count[ch]--;
             }
@@ -1935,8 +1933,7 @@ public:
         
         cout << "\n --- PATHS BETWEEN USERS (DFS) ---\n";
         if (allPaths.empty()) {
-            cout << " No path found between " << currentUser->GetName() 
-                 << " and " << targetName << ".\n";
+            cout << " No path found between " << currentUser->GetName() << " and " << targetName << ".\n";
         } else {
             cout << " Found " << allPaths.size() << " path(s):\n";
             for (size_t i = 0; i < allPaths.size(); i++) {
@@ -1995,9 +1992,113 @@ public:
         
         receiver->AddNotification("User " + sender->GetName() + " shared file: " + file->GetName());
         
-        cout << " [SUCCESS] File '" << file->GetName() << "' shared and copied to " 
-             << receiver->GetName() << "'s 'Shared with Me' folder.\n";
+        cout << " [SUCCESS] File '" << file->GetName() << "' shared and copied to " << receiver->GetName() << "'s 'Shared with Me' folder.\n";
         sysLog.Log("Share", sender->GetName() + " shared " + file->GetName() + " with " + targetName);
+    }
+};
+// ==========================================
+//           MAIN SYSTEM CONTROLLER
+// ==========================================
+
+class GoogleDriveSystem {
+private:
+    UserGraph network;
+    User* currentUser;
+
+public:
+    GoogleDriveSystem() : currentUser(nullptr) {}
+
+    void UserDashboard() {
+        while (currentUser) {
+            ClearScreen();
+            PrintHeader("DASHBOARD: " + currentUser->GetName());
+            cout << " 1. Create New Folder\n";
+            cout << " 2. Open Folder\n";
+            cout << " 3. Notifications\n";
+            cout << " 4. Add Friend (Search)\n";
+            cout << " 5. Friend Recommendations (BFS)\n";
+            cout << " 6. Find Connected Users (DFS)\n";
+            cout << " 7. Find Path Between Users (DFS)\n";
+            cout << " 8. Share File\n";
+            cout << " 9. System Logs (Admin)\n";
+            cout << " 10. Logout\n";
+            PrintLine();
+
+            int choice = InputInt(" Select Action: ", 1, 10);
+
+            switch (choice) {
+                case 1: currentUser->CreateFolder(); break;
+                case 2: currentUser->OpenFolder(); break;
+                case 3: currentUser->ShowNotifications(); break;
+                case 4: network.AddFriend(currentUser); break;
+                case 5: network.RecommendFriends(currentUser); break;
+                case 6: network.FindConnectedComponents(currentUser); break;
+                case 7: network.FindPathBetweenUsers(currentUser); break;
+                case 8: network.ShareFile(currentUser); break;
+                case 9: sysLog.DisplayLogs(); break;
+                case 10: 
+                    currentUser = nullptr; 
+                    cout << " Logging out...\n";
+                    return;
+            }
+            if(choice != 10) {
+                cout << "\n (Press Enter to continue...)";
+                cin.get();
+            }
+        }
+    }
+
+    void Run() {
+        while (true) {
+            ClearScreen();
+            cout << R"(
+   _____                   _        _____       _           
+  / ____|                 | |      |  __ \     (_)          
+ | |  __  ___   ___   __ _| | ___  | |  | |_ __ ___   _____ 
+ | | |_ |/ _ \ / _ \ / _` | |/ _ \ | |  | | '__| \ \ / / _ \
+ | |__| | (_) | (_) | (_| | |  __/ | |__| | |  | |\ V /  __/
+  \_____|\___/ \___/ \__, |_|\___| |_____/|_|  |_| \_/ \___|
+                      __/ |                                 
+                     |___/    Ultimate Edition v2.0
+            )" << endl;
+            PrintLine('=');
+            cout << " 1. Login\n";
+            cout << " 2. Register New User\n";
+            cout << " 3. Forgot Password\n";
+            cout << " 4. About & Credits\n";
+            cout << " 5. Exit\n";
+            PrintLine('=');
+            
+            int choice = InputInt(" Select Option: ", 1, 5);
+
+            switch (choice) {
+                case 1:
+                    currentUser = network.Login();
+                    if (currentUser) UserDashboard();
+                    break;
+                case 2:
+                    network.RegisterUser();
+                    break;
+                case 3:
+                    network.RecoverAccount();
+                    break;
+                case 4:
+                    PrintHeader("CREDITS");
+                    cout << " Developed for: Data Structures Final Project\n";
+                    cout << " Features: AVL Trees, Hash Tables, Graphs, Tries, Heaps.\n";
+                    cout << " Lines of Code: 1200+\n";
+                    cout << "\n Press Enter to return.";
+                    cin.get();
+                    break;
+                case 5:
+                    cout << " Shutting down system. Goodbye!\n";
+                    exit(0);
+            }
+            if (choice != 1) { // Login handles its own pause
+                cout << "\n (Press Enter to continue...)";
+                cin.get();
+            }
+        }
     }
 };
 
