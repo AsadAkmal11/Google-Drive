@@ -1653,6 +1653,354 @@ public:
     }
 };
 
+// ==========================================
+//           CLASS: USER
+// ==========================================
+
+class User {
+private:
+    string username;
+    string password;
+    string securityQ;
+    string securityA;
+    AVLTreeFolders myFolders;
+    int folderCounter;
+    CircularNotificationQueue notifications;  // Changed from vector to Circular Linked List
+
+public:
+    User() : folderCounter(1) {}
+
+    void Setup(string u, string p, string sq, string sa) {
+        username = u;
+        password = p;
+        securityQ = sq;
+        securityA = sa;
+    }
+
+    bool CheckPassword(string p) { return password == p; }
+    string GetName() const { return username; }
+    string GetSecQ() const { return securityQ; }
+    bool CheckSecA(string a) { return securityA == a; }
+    void SetPassword(string p) { password = p; }
+
+    void CreateFolder() {
+        string fname = InputString(" Enter new folder name: ");
+        if (fname.empty()) {
+            cout << " [ERROR] Folder name cannot be empty.\n";
+            return;
+        }
+        
+        Folder f;
+        f.SetValues(fname, folderCounter, username);
+        myFolders.AddFolder(f);
+        cout << " [SUCCESS] Folder '" << fname << "' created (ID: " << folderCounter << ").\n";
+        sysLog.Log("FolderCreate", username + " created folder " + fname);
+        folderCounter++;
+    }
+
+    void OpenFolder() {
+        myFolders.DisplayAll();
+        int fid = InputInt(" Enter Folder ID to open: ");
+        Folder* f = myFolders.GetFolder(fid);
+        if(f) {
+            f->ShowMenu();
+        } else {
+            cout << " [ERROR] Invalid Folder ID.\n";
+        }
+    }
+
+    void AddNotification(string msg) {
+        notifications.AddNotification("[" + CurrentTimestamp() + "] " + msg);
+    }
+
+    void ShowNotifications() {
+        PrintHeader("NOTIFICATIONS");
+        notifications.DisplayAll();
+        PrintLine();
+    }
+    
+    // Needed for sharing
+    Folder* GetFolder(int id) { return myFolders.GetFolder(id); }
+    AVLTreeFolders* GetFolderTree() { return &myFolders; }
+};
+
+// ==========================================
+//       DATA STRUCTURE: GRAPH (SOCIAL)
+// ==========================================
+
+class UserGraph {
+private:
+    vector<User*> users;
+    vector<vector<int>> adj; // Adjacency Matrix
+    TrieUsers userTrie; // For fast search
+
+    int GetUserIndex(string name) {
+        for(size_t i=0; i<users.size(); i++) {
+            if(users[i]->GetName() == name) return i;
+        }
+        return -1;
+    }
+
+public:
+    UserGraph() {}
+
+    void RegisterUser() {
+        PrintHeader("NEW USER REGISTRATION");
+        string u = InputString(" Choose Username: ");
+        if(userTrie.Search(u)) {
+            cout << " [ERROR] Username taken.\n";
+            return;
+        }
+
+        string p = InputString(" Choose Password: ");
+        string sq = InputString(" Security Question: ");
+        string sa = InputString(" Security Answer: ");
+
+        User* newUser = new User();
+        newUser->Setup(u, p, sq, sa);
+        
+        users.push_back(newUser);
+        // Expand Adjacency Matrix
+        for(auto& row : adj) row.push_back(0); // Add col to existing rows
+        adj.push_back(vector<int>(users.size(), 0)); // Add new row
+        
+        userTrie.Insert(u);
+        sysLog.Log("UserRegister", "New user registered: " + u);
+        cout << " [SUCCESS] User registered!\n";
+    }
+
+    User* Login() {
+        PrintHeader("LOGIN");
+        string u = InputString(" Username: ");
+        int idx = GetUserIndex(u);
+        if(idx == -1) {
+            cout << " [ERROR] User not found.\n";
+            return nullptr;
+        }
+        
+        string p = InputString(" Password: ");
+        if(users[idx]->CheckPassword(p)) {
+            sysLog.Log("Login", "User " + u + " logged in.");
+            return users[idx];
+        } else {
+            cout << " [ERROR] Incorrect password.\n";
+            return nullptr;
+        }
+    }
+    
+    void RecoverAccount() {
+        string u = InputString(" Enter Username to recover: ");
+        int idx = GetUserIndex(u);
+        if(idx == -1) { cout << " User not found.\n"; return; }
+        
+        cout << " Security Question: " << users[idx]->GetSecQ() << endl;
+        string ans = InputString(" Answer: ");
+        if(users[idx]->CheckSecA(ans)) {
+            string newP = InputString(" Enter New Password: ");
+            users[idx]->SetPassword(newP);
+            cout << " [SUCCESS] Password reset.\n";
+            sysLog.Log("PassReset", "Password reset for " + u);
+        } else {
+            cout << " [ERROR] Wrong answer.\n";
+        }
+    }
+
+    // --- FRIENDSHIP & GRAPH ALGORITHMS ---
+
+    void AddFriend(User* currentUser) {
+        cout << " Find Friend (Autocomplete):\n";
+        string prefix = InputString(" Enter prefix to search: ");
+        userTrie.AutoComplete(prefix);
+        
+        string target = InputString(" Enter exact username to add: ");
+        int u1 = GetUserIndex(currentUser->GetName());
+        int u2 = GetUserIndex(target);
+
+        if(u2 == -1 || u1 == u2) {
+            cout << " [ERROR] Invalid user.\n";
+            return;
+        }
+        
+        adj[u1][u2] = 1;
+        adj[u2][u1] = 1; // Undirected
+        cout << " [SUCCESS] You are now friends with " << target << "!\n";
+        sysLog.Log("FriendAdd", currentUser->GetName() + " added " + target);
+    }
+
+    // BFS Algorithm to find "Friend of a Friend"
+    void RecommendFriends(User* currentUser) {
+        int startNode = GetUserIndex(currentUser->GetName());
+        if(startNode == -1) return;
+
+        bool visited[100] = {false};
+        queue<int> q;
+        
+        visited[startNode] = true;
+        q.push(startNode);
+        
+        cout << "\n --- FRIEND RECOMMENDATIONS (BFS) ---\n";
+        bool found = false;
+
+        while(!q.empty()) {
+            int u = q.front();
+            q.pop();
+
+            for(size_t v=0; v<users.size(); v++) {
+                if(adj[u][v] == 1 && !visited[v]) {
+                    visited[v] = true;
+                    q.push(v);
+                    
+                    // If v is not directly connected to startNode, suggest it
+                    if(adj[startNode][v] == 0 && v != startNode) {
+                        cout << " Suggestion: " << users[v]->GetName() << " (Friend of " << users[u]->GetName() << ")\n";
+                        found = true;
+                    }
+                }
+            }
+        }
+        if(!found) cout << " No suggestions available.\n";
+    }
+
+    // DFS Algorithm - Depth First Search
+    void DFSHelper(int node, bool visited[], vector<int>& component) {
+        visited[node] = true;
+        component.push_back(node);
+        
+        for (size_t i = 0; i < users.size(); i++) {
+            if (adj[node][i] == 1 && !visited[i]) {
+                DFSHelper(i, visited, component);
+            }
+        }
+    }
+
+    void FindConnectedComponents(User* currentUser) {
+        int startNode = GetUserIndex(currentUser->GetName());
+        if (startNode == -1) return;
+        
+        bool visited[100] = {false};
+        vector<int> component;
+        
+        DFSHelper(startNode, visited, component);
+        
+        cout << "\n --- CONNECTED USERS (DFS - Depth First Search) ---\n";
+        cout << " Your connected network includes:\n";
+        bool found = false;
+        for (int idx : component) {
+            if (idx != startNode) {
+                cout << " - " << users[idx]->GetName() << endl;
+                found = true;
+            }
+        }
+        if (!found) cout << " No connected users found.\n";
+    }
+
+    void FindAllPathsHelper(int start, int end, bool visited[], vector<int>& path, vector<vector<int>>& allPaths) {
+        visited[start] = true;
+        path.push_back(start);
+        
+        if (start == end) {
+            allPaths.push_back(path);
+        } else {
+            for (size_t i = 0; i < users.size(); i++) {
+                if (adj[start][i] == 1 && !visited[i]) {
+                    FindAllPathsHelper(i, end, visited, path, allPaths);
+                }
+            }
+        }
+        
+        path.pop_back();
+        visited[start] = false;
+    }
+
+    void FindPathBetweenUsers(User* currentUser) {
+        string targetName = InputString(" Enter target username: ");
+        int startNode = GetUserIndex(currentUser->GetName());
+        int endNode = GetUserIndex(targetName);
+        
+        if (startNode == -1 || endNode == -1) {
+            cout << " [ERROR] Invalid user(s).\n";
+            return;
+        }
+        
+        if (startNode == endNode) {
+            cout << " [INFO] Same user selected.\n";
+            return;
+        }
+        
+        bool visited[100] = {false};
+        vector<int> path;
+        vector<vector<int>> allPaths;
+        
+        FindAllPathsHelper(startNode, endNode, visited, path, allPaths);
+        
+        cout << "\n --- PATHS BETWEEN USERS (DFS) ---\n";
+        if (allPaths.empty()) {
+            cout << " No path found between " << currentUser->GetName() 
+                 << " and " << targetName << ".\n";
+        } else {
+            cout << " Found " << allPaths.size() << " path(s):\n";
+            for (size_t i = 0; i < allPaths.size(); i++) {
+                cout << " Path " << (i+1) << ": ";
+                for (size_t j = 0; j < allPaths[i].size(); j++) {
+                    cout << users[allPaths[i][j]]->GetName();
+                    if (j < allPaths[i].size() - 1) cout << " -> ";
+                }
+                cout << endl;
+            }
+        }
+    }
+
+    // --- FILE SHARING LOGIC ---
+
+    void ShareFile(User* sender) {
+        string targetName = InputString(" Enter username to share with: ");
+        int receiverIdx = GetUserIndex(targetName);
+        
+        if(receiverIdx == -1) { cout << " User not found.\n"; return; }
+        
+        User* receiver = users[receiverIdx];
+        
+        // Select File
+        sender->GetFolderTree()->DisplayAll();
+        int folderID = InputInt(" Select source Folder ID: ");
+        Folder* srcFolder = sender->GetFolder(folderID);
+        
+        if(!srcFolder) { cout << " Invalid folder.\n"; return; }
+        
+        // We need a way to list files - for now, just ask for file ID
+        // In a real implementation, we'd have a method to list files
+        cout << "\n Note: You'll need to know the File ID from the folder.\n";
+        int fileID = InputInt(" Enter File ID to share: ");
+        
+        File* file = srcFolder->GetFileById(fileID);
+        if(!file) { cout << " File not found.\n"; return; }
+        
+        // Create or find "Shared with Me" folder
+        // Use a special high ID (9999) for shared folder to avoid conflicts
+        Folder* sharedFolder = receiver->GetFolder(9999);
+        if (!sharedFolder) {
+            // Create shared folder
+            Folder newShared;
+            newShared.SetValues("Shared with Me", 9999, receiver->GetName());
+            receiver->GetFolderTree()->AddFolder(newShared);
+            sharedFolder = receiver->GetFolder(9999);
+        }
+        
+        // Actually copy the file
+        File sharedFile = *file;  // Copy file
+        // Get a new ID from the shared folder's counter
+        int newFileID = sharedFolder->GetFileIDCounter();
+        sharedFile.SetID(newFileID);
+        sharedFolder->InsertSharedFile(sharedFile);
+        
+        receiver->AddNotification("User " + sender->GetName() + " shared file: " + file->GetName());
+        
+        cout << " [SUCCESS] File '" << file->GetName() << "' shared and copied to " 
+             << receiver->GetName() << "'s 'Shared with Me' folder.\n";
+        sysLog.Log("Share", sender->GetName() + " shared " + file->GetName() + " with " + targetName);
+    }
+};
+
 int main(){
 
     return 0;
