@@ -32,6 +32,12 @@ void ClearScreen() {
         system("clear");
     #endif
 }
+string Trim(string s) {
+    int start = s.find_first_not_of(" \t\n\r");
+    int end = s.find_last_not_of(" \t\n\r");
+    if(start == string::npos) return "";
+    return s.substr(start, end - start + 1);
+}
 
 /**
  * @brief  Gets the current system time as a formatted string.
@@ -1728,10 +1734,11 @@ public:
 
     void AddFriend(User* currentUser) {
         cout << " Find Friend (Autocomplete):\n";
-        string prefix = InputString(" Enter prefix to search: ");
+        string prefix = Trim(InputString(" Enter prefix to search: "));
         userTrie.AutoComplete(prefix);
-        
-        string target = InputString(" Enter exact username to add: ");
+
+        string target = Trim(InputString(" Enter exact username to add: "));
+
         int u1 = GetUserIndex(currentUser->GetName());
         int u2 = GetUserIndex(target);
 
@@ -1739,12 +1746,17 @@ public:
             cout << " [ERROR] Invalid user.\n";
             return;
         }
-        
+
+        if(adj[u1][u2] == 1) {
+            cout << " [INFO] Already friends.\n";
+            return;
+        }
+
         adj[u1][u2] = 1;
-        adj[u2][u1] = 1; // Undirected
-        cout << " [SUCCESS] You are now friends with " << target << "!\n";
-        sysLog.Log("FriendAdd", currentUser->GetName() + " added " + target);
-    }
+        adj[u2][u1] = 1;
+
+        cout << " [SUCCESS] You are now friends with " << users[u2]->GetName() << "!\n";
+}
 
     // BFS Algorithm to find "Friend of a Friend"
     void RecommendFriends(User* currentUser) {
