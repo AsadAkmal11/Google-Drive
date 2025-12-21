@@ -2005,9 +2005,9 @@ public:
                     break;
                 case 4:
                     PrintHeader("CREDITS");
-                    cout << " Developed for: Data Structures Final Project\n";
+                    cout << " Developed for: Data Structures and Alogorithm Final Semester Project\n";
                     cout << " Features: AVL Trees, Hash Tables, Graphs, Tries, Heaps.\n";
-                    cout << " Lines of Code: 1200+\n";
+                    cout << " Submitted by:\n -M.Zawar Fahim \n -Hamza Sami \n -M.Asad Akmal";
                     cout << "\n Press Enter to return.";
                     cin.get();
                     break;
