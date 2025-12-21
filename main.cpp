@@ -2103,6 +2103,8 @@ public:
 };
 
 int main(){
-
+    srand(time(0));
+    GoogleDriveSystem app;
+    app.Run();
     return 0;
 }
