@@ -18,10 +18,6 @@ const int MAX_STACK_SIZE = 50;
 const int INITIAL_HASH_SIZE = 11;
 const string VERSION = "2.0.0 Ultimate";
 
-// ==========================================
-//           UTILITY & HELPER FUNCTIONS
-// ==========================================
-
 /**
  * @brief Clears the console screen in a cross-platform way.
  */
@@ -38,7 +34,6 @@ string Trim(string s) {
     if(start == string::npos) return "";
     return s.substr(start, end - start + 1);
 }
-
 /**
  * @brief  Gets the current system time as a formatted string.
  * @return string YYYY-MM-DD HH:MM:SS
@@ -49,7 +44,6 @@ string CurrentTimestamp() {
     strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", localtime(&t));
     return string(buf);
 }
-
 /**
  * @brief Prints a decorative horizontal line.
  */
@@ -131,10 +125,6 @@ public:
 // Global logger instance
 SystemLogger sysLog;
 
-// ==========================================
-//           CORE DATA CLASSES
-// ==========================================
-
 class FileVersion {
 public:
     string content; 
@@ -145,9 +135,6 @@ public:
         timestamp = CurrentTimestamp();
     }
 };
-// ==========================================
-//       DATA STRUCTURE: LINKED LIST (VERSIONS)
-// ==========================================
 
 /**
  * @class VersionNode
@@ -273,9 +260,7 @@ private:
     int priority; // 1-10, for Heap
     VersionLinkedList versions;  // Changed from vector to Linked List
     vector<string> tags;
-    
-    // --- RLE Compression Algorithms ---
-    
+        
     string RLECompress(const string &s) {
         if (s.empty()) return "";
         string out;
@@ -363,9 +348,6 @@ public:
     int GetSize() const { return sizeBytes; }
     int GetPriority() const { return priority; }
 };
-// ==========================================
-//       DATA STRUCTURE: DOUBLE LINKED LIST (FILE NAVIGATION)
-// ==========================================
 
 /**
  * @class FileNode
@@ -490,10 +472,6 @@ public:
     bool HasPrev() const { return current && current->prev != nullptr; }
 };
 
-// ==========================================
-//       DATA STRUCTURE: CIRCULAR LINKED LIST (NOTIFICATIONS)
-// ==========================================
-
 /**
  * @class NotificationNode
  * @brief Node for Circular Linked List storing notifications
@@ -584,10 +562,6 @@ public:
     }
 };
 
-// ==========================================
-//       DATA STRUCTURE: STACK & QUEUE
-// ==========================================
-
 /**
  * @class FileStack
  * @brief Implements LIFO structure for Deleted Files (Trash Bin).
@@ -657,10 +631,6 @@ public:
     }
 };
 
-// ==========================================
-//       DATA STRUCTURE: MAX HEAP (PRIORITY)
-// ==========================================
-
 /**
  * @class FileMaxHeap
  * @brief Manages "Starred" or High Priority files.
@@ -726,10 +696,6 @@ public:
         return root;
     }
 };
-
-// ==========================================
-//       DATA STRUCTURE: HASH TABLE
-// ==========================================
 
 /**
  * @class HashTableFiles
@@ -855,8 +821,6 @@ public:
         }
         cout << " ---------------------------------------------------------\n";
     }
-
-    // --- SORTING ALGORITHMS ---
 
     // Helper to get vector for sorting
     vector<File> GetFilesVector() {
@@ -1090,10 +1054,6 @@ public:
         for(auto& f : v) f.DisplayRow();
     }
 };
-
-// ==========================================
-//       CLASS: FOLDER
-// ==========================================
 
 class Folder {
 private:
@@ -1338,10 +1298,6 @@ public:
     File* GetFileById(int fid) { return files.Search(fid); }
 };
 
-// ==========================================
-//       DATA STRUCTURE: AVL TREE
-// ==========================================
-
 class TreeNode {
 public:
     Folder data;
@@ -1501,10 +1457,6 @@ public:
     }
 };
 
-// ==========================================
-//       DATA STRUCTURE: TRIE (AUTOCOMPLETE)
-// ==========================================
-
 const int ALPHABET_SIZE = 26;
 
 struct TrieNode {
@@ -1577,11 +1529,6 @@ public:
         SuggestHelper(pCrawl, prefix);
     }
 };
-
-// ==========================================
-//           CLASS: USER
-// ==========================================
-
 class User {
 private:
     string username;
@@ -1648,10 +1595,6 @@ public:
     Folder* GetFolder(int id) { return myFolders.GetFolder(id); }
     AVLTreeFolders* GetFolderTree() { return &myFolders; }
 };
-
-// ==========================================
-//       DATA STRUCTURE: GRAPH (SOCIAL)
-// ==========================================
 
 class UserGraph {
 private:
@@ -1929,9 +1872,6 @@ public:
         sysLog.Log("Share", sender->GetName() + " shared " + file->GetName() + " with " + targetName);
     }
 };
-// ==========================================
-//           MAIN SYSTEM CONTROLLER
-// ==========================================
 
 class GoogleDriveSystem {
 private:
